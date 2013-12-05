@@ -16,6 +16,7 @@ import java.util.TimeZone;
 
 public class JSONEventLayout extends Layout {
 
+    private String userfields; // comma separated, colon separated key value pairs    
     private boolean locationInfo = false;
 
     private String tags;
@@ -100,7 +101,16 @@ public class JSONEventLayout extends Layout {
         addFieldData("level", loggingEvent.getLevel().toString());
         addFieldData("threadName", threadName);
 
-        logstashEvent.put("@fields", fieldData);
+        // Add userfields if provided
+        if (this.userfields != null) {
+            for (String pairs : this.userfields.split(",")) {
+                String[] pair = pairs.split(":");
+                if (pair.length == 2) {
+                    this.addFieldData(pair[0], pair[1]);
+                }
+            }
+        }                
+        logstashEvent.put("@fields", fieldData);        
         return logstashEvent.toString() + "\n";
     }
 
@@ -134,5 +144,13 @@ public class JSONEventLayout extends Layout {
         if (null != keyval) {
             fieldData.put(keyname, keyval);
         }
+    }
+    
+    /**
+     * Add fieldData from the provided userfields.   
+     * @param userfields comma separated, colon separated key value pairs
+     */
+    public void setUserfields(String userfields) {
+        this.userfields = userfields;
     }
 }

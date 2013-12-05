@@ -3,12 +3,11 @@ package net.logstash.log4j;
 import junit.framework.Assert;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.NDC;
-import org.junit.Before;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -32,7 +31,9 @@ public class JSONEventLayoutTest {
 
     @BeforeClass
     public static void setupTestAppender() {
-        appender = new MockAppender(new JSONEventLayout());
+        JSONEventLayout layout = new JSONEventLayout();
+        layout.setUserfields("application:ase,instance:001");
+        appender = new MockAppender(layout);
         logger = Logger.getRootLogger();
         appender.setThreshold(Level.TRACE);
         appender.setName("mockappender");
@@ -202,5 +203,17 @@ public class JSONEventLayoutTest {
     public void testDateFormat() {
         long timestamp = 1364844991207L;
         Assert.assertEquals("format does not produce expected output", "2013-04-01T19:36:31.207Z", JSONEventLayout.dateFormat(timestamp));
+    }
+    
+    @Test
+    public void testUserFields() {
+        logger.info("this is an info message");
+        String message = appender.getMessages()[0];
+
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+        Assert.assertTrue("atFields should contain application value", atFields.containsKey("application"));
+        Assert.assertTrue("atFields should contain instance value", atFields.containsKey("instance"));                        
     }
 }
