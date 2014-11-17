@@ -1,6 +1,7 @@
 package net.logstash.log4j;
 
 import junit.framework.Assert;
+import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 
@@ -51,14 +52,14 @@ public class JSONEventLayoutTest {
     @Test
     public void testJSONEventLayoutIsJSON() {
         logger.info("this is an info message");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Assert.assertTrue("Event is not valid JSON", JSONValue.isValidJsonStrict(message));
     }
 
     @Test
     public void testJSONEventLayoutHasKeys() {
         logger.info("this is a test message");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
 
@@ -70,7 +71,7 @@ public class JSONEventLayoutTest {
     @Test
     public void testJSONEventLayoutHasFieldLevel() {
         logger.fatal("this is a new test message");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -83,7 +84,7 @@ public class JSONEventLayoutTest {
         String ndcData = new String("json-layout-test");
         NDC.push(ndcData);
         logger.warn("I should have NDC data in my log");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -95,7 +96,7 @@ public class JSONEventLayoutTest {
     public void testJSONEventLayoutExceptions() {
         String exceptionMessage = new String("shits on fire, yo");
         logger.fatal("uh-oh", new IllegalArgumentException(exceptionMessage));
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -108,7 +109,7 @@ public class JSONEventLayoutTest {
     @Test
     public void testJSONEventLayoutHasClassName() {
         logger.warn("warning dawg");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -119,7 +120,7 @@ public class JSONEventLayoutTest {
     @Test
     public void testJSONEventHasFileName() {
         logger.warn("whoami");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -130,7 +131,7 @@ public class JSONEventLayoutTest {
     @Test
     public void testJSONEventHasLoggerName() {
         logger.warn("whoami");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -140,7 +141,7 @@ public class JSONEventLayoutTest {
     @Test
     public void testJSONEventHasThreadName() {
         logger.warn("whoami");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -155,7 +156,7 @@ public class JSONEventLayoutTest {
         layout.setLocationInfo(false);
 
         logger.warn("warning dawg");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
@@ -208,12 +209,36 @@ public class JSONEventLayoutTest {
     @Test
     public void testUserFields() {
         logger.info("this is an info message");
-        String message = appender.getMessages()[0];
+        String message = MockAppender.getMessages()[0];
 
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
         Assert.assertTrue("atFields should contain application value", atFields.containsKey("application"));
         Assert.assertTrue("atFields should contain instance value", atFields.containsKey("instance"));                        
+    }
+
+    @Test
+    public void testJsonParser() {
+        logger.info("{'message': 'test', 'deeper': [1, 2, 3], 'nested': {'some': 'thing'}}");
+        String message = MockAppender.getMessages()[0];
+
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        Assert.assertEquals("test", jsonObject.get("@message"));
+
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+        Assert.assertTrue(atFields.containsKey("context"));
+        JSONObject context = (JSONObject) atFields.get("context");
+
+        Assert.assertEquals(2, context.size());
+        JSONObject nested = (JSONObject) context.get("nested");
+        JSONArray deeper = (JSONArray) context.get("deeper");
+
+        Assert.assertNotNull(nested);
+        Assert.assertNotNull(deeper);
+
+        Assert.assertEquals("[1,2,3]", deeper.toString());
+        Assert.assertEquals("thing", nested.get("some"));
     }
 }
