@@ -123,7 +123,7 @@ public class JSONEventLayout extends Layout {
     }
 
     private boolean isJson(String message) {
-        return message.startsWith("{") && message.endsWith("}");
+        return message.startsWith("{") && message.endsWith("}") && JSONValue.isValidJson(message);
     }
 
     private void parseJson(String message) {

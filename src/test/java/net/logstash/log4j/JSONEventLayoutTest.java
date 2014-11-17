@@ -241,4 +241,16 @@ public class JSONEventLayoutTest {
         Assert.assertEquals("[1,2,3]", deeper.toString());
         Assert.assertEquals("thing", nested.get("some"));
     }
+    
+
+    @Test
+    public void testInvalidJson() {
+        String invalidJson = "{not_json: in brackets}";
+        logger.info(invalidJson);
+        String message = MockAppender.getMessages()[0];
+
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        Assert.assertEquals(invalidJson, jsonObject.get("@message"));
+    }
 }
