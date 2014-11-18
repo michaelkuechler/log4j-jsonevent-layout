@@ -115,28 +115,30 @@ public class JSONEventLayout extends Layout {
 
     private void appendMessage(LoggingEvent loggingEvent) {
         String message = loggingEvent.getRenderedMessage();
-        if (isJson(message)) {
-            parseJson(message);
+        JSONObject json = asJson(message);
+        if (json != null) {
+            appendJson(json, message);
         } else {
             logstashEvent.put("@message", message);
         }
     }
 
-    private boolean isJson(String message) {
-        return message.startsWith("{") && message.endsWith("}") && JSONValue.isValidJson(message);
+    private JSONObject asJson(String message) {
+        if (message.startsWith("{") && message.endsWith("}")) {
+            return (JSONObject) JSONValue.parse(message);
+        } else {
+            return null;
+        }
     }
 
-    private void parseJson(String message) {
-        JSONObject json = (JSONObject) JSONValue.parse(message);
-        if (json != null) {
-            if (json.containsKey("message")) {
-                logstashEvent.put("@message", json.get("message"));
-                json.remove("message");
-                fieldData.put("context", json);
-            } else {
-                logstashEvent.put("@message", message);
-            }
+    private void appendJson(JSONObject json, String message) {
+        if (json.containsKey("message")) {
+            logstashEvent.put("@message", json.get("message"));
+            json.remove("message");
+        } else {
+            logstashEvent.put("@message", message);
         }
+        fieldData.put("context", json);
     }
 
     public boolean ignoresThrowable() {

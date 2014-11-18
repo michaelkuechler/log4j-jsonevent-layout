@@ -1,5 +1,6 @@
 package net.logstash.log4j;
 
+import static org.junit.Assert.assertFalse;
 import junit.framework.Assert;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
@@ -245,12 +246,14 @@ public class JSONEventLayoutTest {
 
     @Test
     public void testInvalidJson() {
-        String invalidJson = "{not_json: in brackets}";
+        String invalidJson = "{not_json: [in brackets}";
         logger.info(invalidJson);
         String message = MockAppender.getMessages()[0];
 
         Object obj = JSONValue.parse(message);
         JSONObject jsonObject = (JSONObject) obj;
         Assert.assertEquals(invalidJson, jsonObject.get("@message"));
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+        Assert.assertFalse(atFields.containsKey("context"));
     }
 }
