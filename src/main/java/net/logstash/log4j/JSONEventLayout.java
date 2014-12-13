@@ -114,8 +114,15 @@ public class JSONEventLayout extends Layout {
     }
 
     private void appendMessage(LoggingEvent loggingEvent) {
+        Object messageObj = loggingEvent.getMessage();
+        Map<?, ?> json = null;
+        if (messageObj instanceof String) {
+            String message = (String) messageObj;
+            json = asJson(message);
+        } else if (messageObj instanceof Map<?, ?>) {
+            json = (Map<?, ?>) messageObj;
+        }
         String message = loggingEvent.getRenderedMessage();
-        JSONObject json = asJson(message);
         if (json != null) {
             appendJson(json, message);
         } else {
@@ -131,7 +138,7 @@ public class JSONEventLayout extends Layout {
         }
     }
 
-    private void appendJson(JSONObject json, String message) {
+    private void appendJson(Map<?, ?> json, String message) {
         if (json.containsKey("message")) {
             logstashEvent.put("@message", json.get("message"));
             json.remove("message");
