@@ -2,6 +2,8 @@ package net.logstash.log4j;
 
 import net.logstash.log4j.data.HostData;
 import net.minidev.json.JSONObject;
+import net.minidev.json.JSONValue;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.log4j.Layout;
@@ -9,7 +11,6 @@ import org.apache.log4j.spi.LocationInfo;
 import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.spi.ThrowableInformation;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
@@ -19,15 +20,13 @@ public class JSONEventLayout extends Layout {
     private String userfields; // comma separated, colon separated key value pairs    
     private boolean locationInfo = false;
 
-    private String tags;
     private boolean ignoreThrowable = false;
 
-    private boolean activeIgnoreThrowable = ignoreThrowable;
     private String hostname = new HostData().getHostName();
     private String threadName;
     private long timestamp;
     private String ndc;
-    private Map mdc;
+    private Map<?,?> mdc;
     private LocationInfo info;
     private HashMap<String, Object> fieldData;
     private HashMap<String, Object> exceptionInformation;
@@ -69,7 +68,7 @@ public class JSONEventLayout extends Layout {
         logstashEvent = new JSONObject();
 
         logstashEvent.put("@source_host", hostname);
-        logstashEvent.put("@message", loggingEvent.getRenderedMessage());
+        appendMessage(loggingEvent);
         logstashEvent.put("@timestamp", dateFormat(timestamp));
 
         if (loggingEvent.getThrowableInformation() != null) {
@@ -114,6 +113,41 @@ public class JSONEventLayout extends Layout {
         return logstashEvent.toString() + "\n";
     }
 
+    private void appendMessage(LoggingEvent loggingEvent) {
+        Object messageObj = loggingEvent.getMessage();
+        Map<?, ?> json = null;
+        if (messageObj instanceof String) {
+            String message = (String) messageObj;
+            json = asJson(message);
+        } else if (messageObj instanceof Map<?, ?>) {
+            json = (Map<?, ?>) messageObj;
+        }
+        String message = loggingEvent.getRenderedMessage();
+        if (json != null) {
+            appendJson(json, message);
+        } else {
+            logstashEvent.put("@message", message);
+        }
+    }
+
+    private JSONObject asJson(String message) {
+        if (message.startsWith("{") && message.endsWith("}")) {
+            return (JSONObject) JSONValue.parse(message);
+        } else {
+            return null;
+        }
+    }
+
+    private void appendJson(Map<?, ?> json, String message) {
+        if (json.containsKey("message")) {
+            logstashEvent.put("@message", json.get("message"));
+            json.remove("message");
+        } else {
+            logstashEvent.put("@message", message);
+        }
+        fieldData.put("context", json);
+    }
+
     public boolean ignoresThrowable() {
         return ignoreThrowable;
     }
@@ -137,7 +171,7 @@ public class JSONEventLayout extends Layout {
     }
 
     public void activateOptions() {
-        activeIgnoreThrowable = ignoreThrowable;
+        //Ignored
     }
 
     private void addFieldData(String keyname, Object keyval) {
