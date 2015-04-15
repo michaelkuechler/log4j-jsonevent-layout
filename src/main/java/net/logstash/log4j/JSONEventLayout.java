@@ -3,8 +3,8 @@ package net.logstash.log4j;
 import net.logstash.log4j.data.HostData;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
-
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.log4j.Layout;
 import org.apache.log4j.spi.LocationInfo;
@@ -21,6 +21,7 @@ public class JSONEventLayout extends Layout {
     private boolean locationInfo = false;
 
     private boolean ignoreThrowable = false;
+    private boolean addRootThrowable = true;
 
     private String hostname = new HostData().getHostName();
     private String threadName;
@@ -73,15 +74,32 @@ public class JSONEventLayout extends Layout {
 
         if (loggingEvent.getThrowableInformation() != null) {
             final ThrowableInformation throwableInformation = loggingEvent.getThrowableInformation();
-            if (throwableInformation.getThrowable().getClass().getCanonicalName() != null) {
-                exceptionInformation.put("exception_class", throwableInformation.getThrowable().getClass().getCanonicalName());
+            final Throwable throwable = throwableInformation.getThrowable();
+
+
+            if (throwable.getClass().getCanonicalName() != null) {
+                exceptionInformation.put("exception_class", throwable.getClass().getCanonicalName());
             }
-            if (throwableInformation.getThrowable().getMessage() != null) {
-                exceptionInformation.put("exception_message", throwableInformation.getThrowable().getMessage());
+            if (throwable.getMessage() != null) {
+                exceptionInformation.put("exception_message", throwable.getMessage());
             }
             if (throwableInformation.getThrowableStrRep() != null) {
                 String stackTrace = StringUtils.join(throwableInformation.getThrowableStrRep(), "\n");
                 exceptionInformation.put("stacktrace", stackTrace);
+            }
+            if(addRootThrowable) {
+                final Throwable rootThrowable = getRootCause(throwable);
+                final ThrowableInformation rootThrowableInfo = new ThrowableInformation(rootThrowable, loggingEvent.getLogger());
+                if (rootThrowable.getClass().getCanonicalName() != null) {
+                    exceptionInformation.put("root_exception_class", rootThrowable.getClass().getCanonicalName());
+                }
+                if (rootThrowable.getMessage() != null) {
+                    exceptionInformation.put("root_exception_message", rootThrowable.getMessage());
+                }
+                if (rootThrowableInfo.getThrowableStrRep() != null) {
+                    String stackTrace = StringUtils.join(rootThrowableInfo.getThrowableStrRep(), "\n");
+                    exceptionInformation.put("root_stacktrace", stackTrace);
+                }
             }
             addFieldData("exception", exceptionInformation);
         }
@@ -148,8 +166,25 @@ public class JSONEventLayout extends Layout {
         fieldData.put("context", json);
     }
 
+    private Throwable getRootCause(Throwable throwable) {
+        final Throwable root = ExceptionUtils.getRootCause(throwable);
+        return root != null ? root : throwable;
+    }
+
     public boolean ignoresThrowable() {
         return ignoreThrowable;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public boolean isAddRootThrowable() {
+        return addRootThrowable;
+    }
+
+    public void setAddRootThrowable(final boolean addRootThrowable) {
+        this.addRootThrowable = addRootThrowable;
     }
 
     /**
