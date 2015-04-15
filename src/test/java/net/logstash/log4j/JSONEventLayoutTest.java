@@ -1,15 +1,14 @@
 package net.logstash.log4j;
 
-import static org.junit.Assert.assertFalse;
 import junit.framework.Assert;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.NDC;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -24,6 +23,7 @@ import org.junit.Test;
 public class JSONEventLayoutTest {
     static Logger logger;
     static MockAppender appender;
+    static JSONEventLayout layout = new JSONEventLayout();
     static final String[] logstashFields = new String[]{
             "@message",
             "@source_host",
@@ -33,14 +33,18 @@ public class JSONEventLayoutTest {
 
     @BeforeClass
     public static void setupTestAppender() {
-        JSONEventLayout layout = new JSONEventLayout();
-        layout.setUserfields("application:ase,instance:001");
         appender = new MockAppender(layout);
         logger = Logger.getRootLogger();
         appender.setThreshold(Level.TRACE);
         appender.setName("mockappender");
         appender.activateOptions();
         logger.addAppender(appender);
+    }
+
+    @Before
+    public void setupLayout() {
+        layout.setAddRootThrowable(true);
+        layout.setUserfields("application:ase,instance:001");
     }
 
     @After
@@ -104,7 +108,61 @@ public class JSONEventLayoutTest {
         JSONObject exceptionInformation = (JSONObject) atFields.get("exception");
 
         Assert.assertEquals("Exception class missing", "java.lang.IllegalArgumentException", exceptionInformation.get("exception_class"));
+        Assert.assertEquals("Root exception class missing", "java.lang.IllegalArgumentException", exceptionInformation.get("root_exception_class"));
         Assert.assertEquals("Exception exception message", exceptionMessage, exceptionInformation.get("exception_message"));
+        Assert.assertEquals("Root exception exception message", exceptionMessage, exceptionInformation.get("root_exception_message"));
+        Assert.assertNotNull("Exception stacktrace is null", exceptionInformation.get("stacktrace"));
+        Assert.assertNotNull("Exception root stacktrace is null", exceptionInformation.get("root_stacktrace"));
+        Assert.assertTrue("Exception stacktrace isn't equal to root exception stacktrace", exceptionInformation.get("stacktrace").equals(exceptionInformation.get("root_stacktrace")));
+        Assert.assertTrue("Exception stacktrace doesn't contain a reference to the exception", exceptionInformation.get("stacktrace").toString().contains("java.lang.IllegalArgumentException"));
+    }
+
+    @Test
+    public void testJSONEventLayoutRootExceptions() {
+        String exceptionMessage = new String("down below the shits on fire, yo");
+        String rootExceptionMessage = new String("shits on fire, yo");
+        Exception root = new IllegalStateException(rootExceptionMessage);
+
+        logger.fatal("uh-oh", new IllegalArgumentException(exceptionMessage, root));
+
+        String message = MockAppender.getMessages()[0];
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+        JSONObject exceptionInformation = (JSONObject) atFields.get("exception");
+
+        Assert.assertEquals("Exception class missing", "java.lang.IllegalArgumentException", exceptionInformation.get("exception_class"));
+        Assert.assertEquals("Root exception class missing", "java.lang.IllegalStateException", exceptionInformation.get("root_exception_class"));
+        Assert.assertEquals("Exception exception message", exceptionMessage, exceptionInformation.get("exception_message"));
+        Assert.assertEquals("Root exception exception message", rootExceptionMessage, exceptionInformation.get("root_exception_message"));
+        Assert.assertNotNull("Exception stacktrace is null", exceptionInformation.get("stacktrace"));
+        Assert.assertNotNull("Exception root stacktrace is null", exceptionInformation.get("root_stacktrace"));
+        Assert.assertFalse("Exception stacktrace is the same as the root exception stacktrace", exceptionInformation.get("stacktrace").equals(exceptionInformation.get("root_stacktrace")));
+        Assert.assertTrue("Exception stacktrace doesn't contain a reference to the exception", exceptionInformation.get("stacktrace").toString().contains("java.lang.IllegalArgumentException"));
+        Assert.assertTrue("Exception stacktrace doesn't contain a reference to the root exception", exceptionInformation.get("stacktrace").toString().contains("java.lang.IllegalStateException"));
+        Assert.assertFalse("Exception stacktrace contains a reference to the top exception", exceptionInformation.get("root_stacktrace").toString().contains("java.lang.IllegalArgumentException"));
+        Assert.assertTrue("Exception stacktrace doesn't contain a reference to the root exception", exceptionInformation.get("root_stacktrace").toString().contains("java.lang.IllegalStateException"));
+    }
+
+    @Test
+    public void testJSONEventLayoutNoRootExceptions() {
+        layout.setAddRootThrowable(false);
+
+        String exceptionMessage = new String("down below the shits on fire, yo");
+        String rootExceptionMessage = new String("shits on fire, yo");
+        Exception root = new IllegalStateException(rootExceptionMessage);
+
+        logger.fatal("uh-oh", new IllegalArgumentException(exceptionMessage, root));
+
+        String message = MockAppender.getMessages()[0];
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+        JSONObject exceptionInformation = (JSONObject) atFields.get("exception");
+
+        Assert.assertNull("Exception root class not null", exceptionInformation.get("root_exception_class"));
+        Assert.assertNull("Exception root message not null", exceptionInformation.get("root_exception_message"));
+        Assert.assertNull("Exception root stacktrace not null", exceptionInformation.get("root_stacktrace"));
     }
 
     @Test
