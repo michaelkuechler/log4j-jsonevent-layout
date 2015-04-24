@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>net.logstash.log4j</groupId>
+  <groupId>com.bol.logstash.log4j</groupId>
   <artifactId>jsonevent-layout</artifactId>
   <packaging>jar</packaging>
-  <version>1.6-bolcom</version>
+  <version>1.7</version>
   <name>jsonevent-layout</name>
   <description>Log4j pattern layout that conforms to the logstash json_event format</description>
   <url>http://logstash.net</url>
