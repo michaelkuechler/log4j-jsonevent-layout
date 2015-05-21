@@ -222,4 +222,8 @@ public class JSONEventLayout extends Layout {
     public void setUserfields(String userfields) {
         this.userfields = userfields;
     }
+
+    public void setHostname( String hostname ) {
+        this.hostname = hostname;
+    }
 }
