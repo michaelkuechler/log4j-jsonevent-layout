@@ -1,6 +1,6 @@
 package net.logstash.log4j;
 
-import net.logstash.log4j.data.HostData;
+import net.logstash.data.HostData;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 import org.apache.commons.lang.StringUtils;
@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
-public class JSONEventLayout extends Layout {
+public class JSONEventLayoutV0 extends Layout {
 
     private String userfields; // comma separated, colon separated key value pairs    
     private boolean locationInfo = false;
@@ -45,7 +45,7 @@ public class JSONEventLayout extends Layout {
      * For backwards compatibility, the default is to generate location information
      * in the log messages.
      */
-    public JSONEventLayout() {
+    public JSONEventLayoutV0() {
         this(true);
     }
 
@@ -54,7 +54,7 @@ public class JSONEventLayout extends Layout {
      *
      * @param locationInfo whether or not to include location information in the log messages.
      */
-    public JSONEventLayout(boolean locationInfo) {
+    public JSONEventLayoutV0(boolean locationInfo) {
         this.locationInfo = locationInfo;
     }
 
