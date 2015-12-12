@@ -1,17 +1,17 @@
-package net.logstash.log4j;
+package net.logstash.log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.spi.LoggingEvent;
 import org.apache.log4j.Layout;
+import org.apache.log4j.spi.LoggingEvent;
 
-public class MockAppender extends AppenderSkeleton {
+public class MockAppenderV1 extends AppenderSkeleton {
 
-    private static List messages = new ArrayList();
+    private static List<String> messages = new ArrayList<String>();
 
-    public MockAppender(Layout layout){
+    public MockAppenderV1(Layout layout){
         this.layout = layout;
     }
     @Override
@@ -28,7 +28,7 @@ public class MockAppender extends AppenderSkeleton {
     }
 
     public static String[] getMessages() {
-        return (String[]) messages.toArray(new String[messages.size()]);
+        return messages.toArray(new String[messages.size()]);
     }
 
     public void clear() {
