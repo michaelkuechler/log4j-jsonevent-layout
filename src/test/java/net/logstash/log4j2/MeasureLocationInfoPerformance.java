@@ -1,5 +1,6 @@
 package net.logstash.log4j2;
 
+import org.apache.logging.log4j.core.layout.JsonLayout;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -10,32 +11,73 @@ public class MeasureLocationInfoPerformance {
   @Ignore
   @Test
   public void measureJSONEventLayoutLocationInfoPerformance() {
-    int iterations = 100000;
+    int iterations = 5000;
+
+    // warm-up
+
+    formatManyWithStandardJsonLayout(true, iterations);
+    formatManyWithStandardJsonLayout(false, iterations);
+    formatMany(true,  iterations);
+    formatMany(false, iterations);
+
+    // measure
+    iterations = 100000;
+
+    long third = formatManyWithStandardJsonLayout(true, iterations);
+    long fourth = formatManyWithStandardJsonLayout(false, iterations);
+
     long firstMeasurement  = formatMany(true,  iterations);
     long secondMeasurement = formatMany(false, iterations);
 
-    System.out.println("First  Measurement (locationInfo: true)  : " + firstMeasurement);
-    System.out.println("Second Measurement (locationInfo: false) : " + secondMeasurement);
+
+
 
     float percentage = 100.0f* (firstMeasurement - secondMeasurement)/secondMeasurement;
-    float perEventWith    = 1.0f * firstMeasurement/iterations;
-    float perEventWithout = 1.0f * secondMeasurement/iterations;
-
-    System.out.println("Average per event (locationInfo: true)  : " + perEventWith    + " ms");
-    System.out.println("Average per event (locationInfo: false) : " + perEventWithout + " ms");
     System.out.println("With locationInfo is " + percentage + "% slower than without.");
+    percentage = 100.0f* (secondMeasurement - fourth)/fourth;
+    System.out.println("JSONEventLayoutV1 is " + percentage + "% slower than JsonLayout.");
+
   }
 
   private long formatMany(boolean locationInfo, int iterations) {
     JSONEventLayoutV1 layout = JSONEventLayoutV1.createLayout(locationInfo, null, Charset.forName("UTF-8"));
+    long totalLength = 0;
+    long start, stop;
+    start = System.currentTimeMillis();
+    for (int i = 0; i < iterations; i++) {
+      String json = layout.toSerializable(LogEventFixtures.createSimpleLogEvent(locationInfo));
+      totalLength = totalLength + json.length();
+//      System.out.println("JSONEventLayoutV1: " + locationInfo + " => length = " + json.length());
+//      System.out.println("json = \n" + json);
+    }
+    stop = System.currentTimeMillis();
+    long millis = stop - start;
+    float perEvent = 1.0f * millis/iterations;
+    String info = String.format("%s locationInfo:[%s] millis=[%d] avg=%f length=[%d] ",
+        layout.getClass().getSimpleName(), locationInfo, millis, perEvent, totalLength);
+    System.out.println(info);
+
+    return millis;
+  }
+
+  private long formatManyWithStandardJsonLayout(boolean locationInfo, int iterations) {
+    JsonLayout layout = (JsonLayout) JsonLayout.createLayout(locationInfo,true,false,true,false,Charset.forName("UTF-8"));
+    long totalLength = 0;
 
     long start, stop;
     start = System.currentTimeMillis();
     for (int i = 0; i < iterations; i++) {
-      layout.toSerializable(LogEventFixtures.createSimpleLogEvent(locationInfo));
+      String json = layout.toSerializable(LogEventFixtures.createSimpleLogEvent(locationInfo));
+      totalLength = totalLength + json.length();
     }
     stop = System.currentTimeMillis();
-    return stop - start;
+    long millis = stop - start;
+    float perEvent = 1.0f * millis/iterations;
+    String info = String.format("%s locationInfo:[%s] millis=[%d] avg=%f length=[%d] ",
+        layout.getClass().getSimpleName(), locationInfo, millis, perEvent, totalLength);
+    System.out.println(info);
+    return millis;
+
   }
 
 }
