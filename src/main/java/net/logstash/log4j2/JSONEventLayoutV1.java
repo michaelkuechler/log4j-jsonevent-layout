@@ -15,9 +15,10 @@ import org.apache.logging.log4j.core.layout.AbstractStringLayout;
 
 import net.logstash.data.HostData;
 import net.minidev.json.JSONObject;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
- * @author michaelkuechler
+ * @author michaelkuechler, maartenbosteels
  */
 @Plugin(name = "JSONEventLayoutV1", category = "Core", elementType = "layout", printObject = true)
 public class JSONEventLayoutV1 extends AbstractStringLayout {
@@ -42,7 +43,7 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	}
 
 	private static final int LOGSTASH_JSON_EVENT_VERSION = 1;
-	private static final String USER_FIELDS_PROPERTY = "net.logstash.log4j2.JSONEventLayoutV1.UserFields";
+	public static final String USER_FIELDS_PROPERTY    = "net.logstash.log4j2.JSONEventLayoutV1.UserFields";
 	private static final FastDateFormat ISO_DATETIME_TIME_ZONE_FORMAT_WITH_MILLIS = FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("UTC"));
 
 	public static String dateFormat(long timestamp) {
@@ -50,7 +51,7 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	}
 
 	private final String whoami = this.getClass().getSimpleName();
-	private Map<String, Object> userFields = new HashMap<String, Object>();
+	private Map<String, Object> userFields = new HashMap<>();
 	private final String hostname = new HostData().getHostName();
 
 	/** @see #createLayout(boolean, String, Charset) */
@@ -64,7 +65,7 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	}
 
 	private Map<String, Object> createUserFields(String log4jPropertyUserFields) {
-		Map<String, Object> userFields = new HashMap<String, Object>();
+		Map<String, Object> userFields = new HashMap<>();
 
 		// extract user fields from log4j config, if defined
 		LOGGER.debug("["+this.whoami+"] Adding user fields from log4j property: "+ log4jPropertyUserFields);
@@ -107,7 +108,7 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		logstashEvent.put("message", event.getMessage().getFormattedMessage());
 
 		if (event.getThrownProxy() != null) {
-			Map<String, Object> exceptionInformation = new HashMap<String, Object>();
+			Map<String, Object> exceptionInformation = new HashMap<>();
 			ThrowableProxy thrownProxy = event.getThrownProxy();
 			if (thrownProxy.getThrowable().getClass().getCanonicalName() != null) {
 				exceptionInformation.put("exception_class", thrownProxy.getThrowable().getClass().getCanonicalName());
@@ -132,14 +133,10 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		append(logstashEvent, "logger_name", event.getLoggerName());
 		append(logstashEvent, "mdc", event.getContextMap());
 		append(logstashEvent, "ndc", event.getContextStack().asList());
-		append(logstashEvent, "level", event.getLevel());
+		append(logstashEvent, "level", "" + event.getLevel());
 		append(logstashEvent, "thread_name", event.getThreadName());
 
 		return logstashEvent;
-	}
-
-	public Map<String, String> getContentFormat() {
-		return new HashMap<String, String>();
 	}
 
 	@Override
@@ -151,7 +148,12 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		if (userFieldsString != null ) {
 			for (String pair : userFieldsString.trim().split(",")) {
 				String[] field = pair.trim().split(":", 2);
-				append(logstashEvent, field[0], field[1]);
+				if (field.length != 2) {
+					StatusLogger.getLogger().warn("Invalid UserFields "
+							+ "(should be of the form key1:value1,key2:value2 but was " + userFieldsString);
+				} else {
+					append(logstashEvent, field[0], field[1]);
+				}
 			}
 		}
 	}
@@ -161,4 +163,5 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 			logstashEvent.put(keyname, keyval);
 		}
 	}
+
 }
