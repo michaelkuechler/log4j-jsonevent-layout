@@ -1,9 +1,11 @@
 package net.logstash.log4j2;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.logging.log4j.core.LogEvent;
@@ -152,7 +154,13 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 			Map<String, String> fields = ((MessageMapMessage) message).getFieldsAsString();
 			append(logstashEvent, "message_parameters", fields);
 		} else if (messageParameters){
-			append(logstashEvent, "message_parameters", event.getMessage().getParameters());
+			Map<String, Object> params = new HashMap<>();
+			// kibana can't access individual items in an array so converting the parameter array to a map
+			int i = 0;
+			for (Object o : event.getMessage().getParameters()){
+				params.put("param_" + i++, o);
+			}
+			append(logstashEvent, "message_parameters", params);
 		}
 
 		return logstashEvent;

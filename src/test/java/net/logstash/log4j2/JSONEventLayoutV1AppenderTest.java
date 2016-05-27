@@ -17,7 +17,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Date;
 import java.util.List;
 
 import static junit.framework.Assert.assertEquals;
@@ -84,20 +83,20 @@ public class JSONEventLayoutV1AppenderTest {
 
     JSONObject json = (JSONObject) JSONValue.parse(lines.get(0));
     assertProperty(json, "message", "This is great info");
-    JSONArray params = (JSONArray) json.get("message_parameters");
-    assertEquals(params.get(0), "great");
+    JSONObject params = (JSONObject) json.get("message_parameters");
+    assertProperty(params, "param_0", "great");
 
     json = (JSONObject) JSONValue.parse(lines.get(1));
     assertProperty(json, "message", "The ultimate answer is 42");
-    params = (JSONArray) json.get("message_parameters");
-    assertEquals(params.get(0), Integer.valueOf(42));
+    params = (JSONObject) json.get("message_parameters");
+    assertProperty(params, "param_0", Integer.valueOf(42));
 
     json = (JSONObject) JSONValue.parse(lines.get(2));
     assertProperty(json, "message", "All together. This is great info.The ultimate answer is 42. Today it is true");
-    params = (JSONArray) json.get("message_parameters");
-    assertEquals(params.get(0), "great");
-    assertEquals(params.get(1), Integer.valueOf(42));
-    assertEquals(params.get(2), Boolean.TRUE);
+    params = (JSONObject) json.get("message_parameters");
+    assertProperty(params, "param_0", "great");
+    assertProperty(params, "param_1", Integer.valueOf(42));
+    assertProperty(params, "param_2", Boolean.TRUE);
   }
 
   @Test
