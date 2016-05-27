@@ -151,7 +151,7 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 
 		Message message = event.getMessage();
 		if (message instanceof MessageMapMessage){
-			Map<String, String> fields = ((MessageMapMessage) message).getFieldsAsString();
+			Map<String, Object> fields = ((MessageMapMessage) message).getFields();
 			append(logstashEvent, "message_parameters", fields);
 		} else if (messageParameters){
 			Map<String, Object> params = new HashMap<>();

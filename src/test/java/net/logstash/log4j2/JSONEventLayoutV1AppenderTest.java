@@ -47,7 +47,7 @@ public class JSONEventLayoutV1AppenderTest {
     System.clearProperty("org.apache.logging.log4j.level");
     System.clearProperty("log4j.configurationFile");
     System.clearProperty("log4j.messageParameters");
-    FileUtils.deleteQuietly(new File(logFile));
+    //FileUtils.deleteQuietly(new File(logFile));
   }
 
   @Test
@@ -115,8 +115,8 @@ public class JSONEventLayoutV1AppenderTest {
     assertProperty(json, "message", "All together. This is great info.The ultimate answer is 42. Today it is false");
     JSONObject params = (JSONObject) json.get("message_parameters");
     assertProperty(params, "type", "great");
-    assertProperty(params, "answer", "42");
-    assertProperty(params, "status", "false");
+    assertProperty(params, "answer", Integer.valueOf(42));
+    assertProperty(params, "status", Boolean.FALSE);
   }
 
 
