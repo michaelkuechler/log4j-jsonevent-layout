@@ -15,6 +15,7 @@ import org.apache.logging.log4j.core.layout.AbstractStringLayout;
 
 import net.logstash.data.HostData;
 import net.minidev.json.JSONObject;
+import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.status.StatusLogger;
 
 /**
@@ -31,15 +32,23 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	 * 	log4j properties with the same name.
 	 * @param charset
 	 * 	The character set to use, defaults to "UTF-8".
+	 * @param messageParameters
+	 *  If "true", log the parameters for the message
 	 * @return A JSON Layout customized for logstash.
 	 */
 	@PluginFactory
 	public static JSONEventLayoutV1 createLayout(
 		@PluginAttribute(value = "locationInfo", defaultBoolean = false) boolean locationInfo,
 		@PluginAttribute(value = "userFields") String userFields,
-		@PluginAttribute(value = "charset", defaultString = "UTF-8") Charset charset)
+		@PluginAttribute(value = "charset", defaultString = "UTF-8") Charset charset,
+	  @PluginAttribute(value = "messageParameters", defaultBoolean = false) boolean messageParameters)
 	{
-		return new JSONEventLayoutV1(locationInfo, userFields, charset);
+		return new JSONEventLayoutV1(locationInfo, userFields, charset, messageParameters);
+	}
+
+	// for backwards-compatible
+	public static JSONEventLayoutV1 createLayout(boolean locationInfo, String userFields, Charset charset){
+		return createLayout(locationInfo, userFields, charset, false);
 	}
 
 	private static final int LOGSTASH_JSON_EVENT_VERSION = 1;
@@ -53,15 +62,17 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	private final String whoami = this.getClass().getSimpleName();
 	private Map<String, Object> userFields = new HashMap<>();
 	private final String hostname = new HostData().getHostName();
+	private boolean messageParameters;
 
-	/** @see #createLayout(boolean, String, Charset) */
+	/** @see #createLayout(boolean, String, Charset, boolean) */
 	private boolean locationInfo = false;
 
-	/** @see #createLayout(boolean, String, Charset) */
-	public JSONEventLayoutV1(boolean locationInfo, String userFields, Charset charset) {
+	/** @see #createLayout(boolean, String, Charset, boolean) */
+	public JSONEventLayoutV1(boolean locationInfo, String userFields, Charset charset, boolean messageParameters) {
 		super(charset);
 		this.locationInfo = locationInfo;
 		this.userFields = createUserFields(userFields);
+		this.messageParameters = messageParameters;
 	}
 
 	private Map<String, Object> createUserFields(String log4jPropertyUserFields) {
@@ -135,6 +146,14 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		append(logstashEvent, "ndc", event.getContextStack().asList());
 		append(logstashEvent, "level", "" + event.getLevel());
 		append(logstashEvent, "thread_name", event.getThreadName());
+
+		Message message = event.getMessage();
+		if (message instanceof MessageMapMessage){
+			Map<String, String> fields = ((MessageMapMessage) message).getFieldsAsString();
+			append(logstashEvent, "message_parameters", fields);
+		} else if (messageParameters){
+			append(logstashEvent, "message_parameters", event.getMessage().getParameters());
+		}
 
 		return logstashEvent;
 	}
