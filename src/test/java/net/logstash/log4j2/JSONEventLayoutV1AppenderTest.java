@@ -47,7 +47,7 @@ public class JSONEventLayoutV1AppenderTest {
     System.clearProperty("org.apache.logging.log4j.level");
     System.clearProperty("log4j.configurationFile");
     System.clearProperty("log4j.messageParameters");
-    //FileUtils.deleteQuietly(new File(logFile));
+    FileUtils.deleteQuietly(new File(logFile));
   }
 
   @Test
