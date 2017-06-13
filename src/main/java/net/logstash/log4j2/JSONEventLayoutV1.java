@@ -1,12 +1,7 @@
 package net.logstash.log4j2;
 
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.stream.Collectors;
-
+import net.logstash.data.HostData;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -14,11 +9,13 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.core.layout.AbstractStringLayout;
-
-import net.logstash.data.HostData;
-import net.minidev.json.JSONObject;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.status.StatusLogger;
+
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * @author michaelkuechler, maartenbosteels
