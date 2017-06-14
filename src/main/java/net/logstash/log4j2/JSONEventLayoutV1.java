@@ -1,10 +1,7 @@
 package net.logstash.log4j2;
 
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TimeZone;
-
+import net.logstash.data.HostData;
+import net.minidev.json.JSONObject;
 import org.apache.commons.lang.time.FastDateFormat;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
@@ -12,12 +9,16 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.impl.ThrowableProxy;
 import org.apache.logging.log4j.core.layout.AbstractStringLayout;
+import org.apache.logging.log4j.message.Message;
+import org.apache.logging.log4j.status.StatusLogger;
 
-import net.logstash.data.HostData;
-import net.minidev.json.JSONObject;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TimeZone;
 
 /**
- * @author michaelkuechler
+ * @author michaelkuechler, maartenbosteels
  */
 @Plugin(name = "JSONEventLayoutV1", category = "Core", elementType = "layout", printObject = true)
 public class JSONEventLayoutV1 extends AbstractStringLayout {
@@ -30,19 +31,27 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	 * 	log4j properties with the same name.
 	 * @param charset
 	 * 	The character set to use, defaults to "UTF-8".
+	 * @param messageParameters
+	 *  If "true", log the parameters for the message
 	 * @return A JSON Layout customized for logstash.
 	 */
 	@PluginFactory
 	public static JSONEventLayoutV1 createLayout(
 		@PluginAttribute(value = "locationInfo", defaultBoolean = false) boolean locationInfo,
 		@PluginAttribute(value = "userFields") String userFields,
-		@PluginAttribute(value = "charset", defaultString = "UTF-8") Charset charset)
+		@PluginAttribute(value = "charset", defaultString = "UTF-8") Charset charset,
+	  @PluginAttribute(value = "messageParameters", defaultBoolean = false) boolean messageParameters)
 	{
-		return new JSONEventLayoutV1(locationInfo, userFields, charset);
+		return new JSONEventLayoutV1(locationInfo, userFields, charset, messageParameters);
+	}
+
+	// for backwards-compatible
+	public static JSONEventLayoutV1 createLayout(boolean locationInfo, String userFields, Charset charset){
+		return createLayout(locationInfo, userFields, charset, false);
 	}
 
 	private static final int LOGSTASH_JSON_EVENT_VERSION = 1;
-	private static final String USER_FIELDS_PROPERTY = "net.logstash.log4j2.JSONEventLayoutV1.UserFields";
+	public static final String USER_FIELDS_PROPERTY    = "net.logstash.log4j2.JSONEventLayoutV1.UserFields";
 	private static final FastDateFormat ISO_DATETIME_TIME_ZONE_FORMAT_WITH_MILLIS = FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("UTC"));
 
 	public static String dateFormat(long timestamp) {
@@ -50,21 +59,23 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 	}
 
 	private final String whoami = this.getClass().getSimpleName();
-	private Map<String, Object> userFields = new HashMap<String, Object>();
+	private Map<String, Object> userFields = new HashMap<>();
 	private final String hostname = new HostData().getHostName();
+	private boolean messageParameters;
 
-	/** @see #createLayout(boolean, String, Charset) */
+	/** @see #createLayout(boolean, String, Charset, boolean) */
 	private boolean locationInfo = false;
 
-	/** @see #createLayout(boolean, String, Charset) */
-	public JSONEventLayoutV1(boolean locationInfo, String userFields, Charset charset) {
+	/** @see #createLayout(boolean, String, Charset, boolean) */
+	public JSONEventLayoutV1(boolean locationInfo, String userFields, Charset charset, boolean messageParameters) {
 		super(charset);
 		this.locationInfo = locationInfo;
 		this.userFields = createUserFields(userFields);
+		this.messageParameters = messageParameters;
 	}
 
 	private Map<String, Object> createUserFields(String log4jPropertyUserFields) {
-		Map<String, Object> userFields = new HashMap<String, Object>();
+		Map<String, Object> userFields = new HashMap<>();
 
 		// extract user fields from log4j config, if defined
 		LOGGER.debug("["+this.whoami+"] Adding user fields from log4j property: "+ log4jPropertyUserFields);
@@ -107,7 +118,7 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		logstashEvent.put("message", event.getMessage().getFormattedMessage());
 
 		if (event.getThrownProxy() != null) {
-			Map<String, Object> exceptionInformation = new HashMap<String, Object>();
+			Map<String, Object> exceptionInformation = new HashMap<>();
 			ThrowableProxy thrownProxy = event.getThrownProxy();
 			if (thrownProxy.getThrowable().getClass().getCanonicalName() != null) {
 				exceptionInformation.put("exception_class", thrownProxy.getThrowable().getClass().getCanonicalName());
@@ -132,14 +143,24 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		append(logstashEvent, "logger_name", event.getLoggerName());
 		append(logstashEvent, "mdc", event.getContextMap());
 		append(logstashEvent, "ndc", event.getContextStack().asList());
-		append(logstashEvent, "level", event.getLevel());
+		append(logstashEvent, "level", "" + event.getLevel());
 		append(logstashEvent, "thread_name", event.getThreadName());
 
-		return logstashEvent;
-	}
+		Message message = event.getMessage();
+		if (message instanceof MessageMapMessage){
+			Map<String, Object> fields = ((MessageMapMessage) message).getFields();
+			append(logstashEvent, "message_parameters", fields);
+		} else if (messageParameters){
+			Map<String, Object> params = new HashMap<>();
+			// kibana can't access individual items in an array so converting the parameter array to a map
+			int i = 0;
+			for (Object o : event.getMessage().getParameters()){
+				params.put("param_" + i++, o);
+			}
+			append(logstashEvent, "message_parameters", params);
+		}
 
-	public Map<String, String> getContentFormat() {
-		return new HashMap<String, String>();
+		return logstashEvent;
 	}
 
 	@Override
@@ -151,7 +172,12 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 		if (userFieldsString != null ) {
 			for (String pair : userFieldsString.trim().split(",")) {
 				String[] field = pair.trim().split(":", 2);
-				append(logstashEvent, field[0], field[1]);
+				if (field.length != 2) {
+					StatusLogger.getLogger().warn("Invalid UserFields "
+							+ "(should be of the form key1:value1,key2:value2 but was " + userFieldsString);
+				} else {
+					append(logstashEvent, field[0], field[1]);
+				}
 			}
 		}
 	}
@@ -161,4 +187,5 @@ public class JSONEventLayoutV1 extends AbstractStringLayout {
 			logstashEvent.put(keyname, keyval);
 		}
 	}
+
 }

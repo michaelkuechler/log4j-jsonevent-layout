@@ -22,16 +22,8 @@ Then I remembered the "hack" that would let you dump your [apache](http://cookbo
 I probably could have pulled this off using a complicated PatternLayout but decided I wanted a turnkey "solution" that did the work for you. That's what this library is.
 
 # Usage
-This is just a quick snippit of a `log4j.properties` file:
 
-```
-log4j.rootCategory=WARN, RollingLog
-log4j.appender.RollingLog=org.apache.log4j.DailyRollingFileAppender
-log4j.appender.RollingLog.Threshold=TRACE
-log4j.appender.RollingLog.File=api.log
-log4j.appender.RollingLog.DatePattern=.yyyy-MM-dd
-log4j.appender.RollingLog.layout=net.logstash.log4j.JSONEventLayoutV1
-```
+TODO
 
 If you use this, your logfile will now have one line per event and it will look something like this:
 
@@ -99,43 +91,37 @@ If you use the XML format for your log4j configuration (and there are valid reas
 
 ## New
 ```xml
-   <appender name="Console" class="org.apache.log4j.ConsoleAppender">
-     <param name="Threshold" value="TRACE" />
-     <layout class="net.logstash.log4j.JSONEventLayoutV1" />
-   </appender>
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+
+    <Appenders>
+        <File name="LogFile" fileName="test-with-locationInfo.log" append="false">
+            <JSONEventLayoutV1 locationInfo="${sys:log4j.locationInfo}" UserFields="app:my-test"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="trace">
+            <AppenderRef ref="LogFile"/>
+        </Root>
+    </Loggers>
+
+</Configuration>
+
 ```
 
 Any appender that supports defining the layout can use this.
-
-# V0/V1/Vnothing
-Originally the layout class was called `JSONEventLayout`. This was originally written back when there was no versioned event format for logstash. As of Logstash 1.2 and forward, the event format is now versioned. The current version is `1` and defined the following required fields:
-
-- `@version`
-- `@timestamp` (optional - will be inferred from event receipt time
-
-Because of this, when adding support for the new format, `JSONEventLayoutV1` was used to allow backwards compatibility. As of `1.6` of the jsonevent-layout library, we've now gone to fully versioned appenders. There is no longer a `JSONEventLayout`. Instead there is:
-
-- `JSONEventLayoutV0`
-- `JSONEventLayoutV1`
-
-Work has stopped on V0 but it won't be removed. No new features are added to V0 (custom UserFields for instance).
 
 # Custom User Fields
 As of version 1.6, you can now add your own metadata to the event in the form of comma-separated key:value pairs. This can be set in either the log4jconfig OR set on the java command-line:
 
 ## log4j config
 ```xml
-<layout class="net.logstash.log4j.JSONEventLayoutV1" >
+<layout class="net.logstash.log4j2.JSONEventLayoutV1" >
   <param name="UserFields" value="foo:bar,baz:quz" />
 </layout>
 ```
 
-or
-
-```
-log4j.appender.RollingLog.layout=net.logstash.log4j.JSONEventLayoutV1
-log4j.appender.RollingLog.layout.UserFields=foo:bar,baz:qux
-```
 
 ## Command-line
 *Note that the command-line version will OVERRIDE any values specified in the config file should there be a key conflict!*

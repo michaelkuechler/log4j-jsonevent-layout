@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO">
+
+    <Appenders>
+        <File name="LogFile" fileName="${sys:test.logfile}" append="false" ignoreExceptions="false">
+            <JSONEventLayoutV1 locationInfo="${sys:log4j.locationInfo}" UserFields="app:my-test" messageParameters="${sys:log4j.messageParameters}"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Root level="trace">
+            <AppenderRef ref="LogFile"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

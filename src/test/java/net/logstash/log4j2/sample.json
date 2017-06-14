@@ -1,0 +1,37 @@
+{
+  "source_host": "Maartens-MacBook-Air.local",
+  "method": "createSimpleLogEvent",
+  "level": "WARN",
+  "message": "Msg",
+  "ndc": [
+    "stack_msg1",
+    "stack_msg2"
+  ],
+  "mdc": {
+    "MDC.A": "A_Value",
+    "MDC.B": "B_Value"
+  },
+  "@timestamp": "2013-04-01T19:36:31.207Z",
+  "file": "LogEventFixtures.java",
+  "line_number": 91,
+  "thread_name": "MyThreadName",
+  "@version": 1
+}
+
+  // compared with output of org.apache.logging.log4j.core.layout.JsonLayout
+
+  // thread => thread_name
+  // level  => level
+  // contextStack  => ndc
+  // source.method => method
+  // source.class  => class
+  // source.line   => line_number
+  // source.file   => file
+  // timeMillis  => @timestamp
+  // message  => message
+
+  // loggerFqcn  => only in JsonLayout
+  // endOfBatch  => only in JsonLayout
+
+  // source_host => only in JSONEventLayoutV1
+

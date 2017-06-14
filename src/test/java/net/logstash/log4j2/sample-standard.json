@@ -1,0 +1,23 @@
+{
+  "timeMillis" : 1364844991207,
+  "thread" : "MyThreadName",
+  "level" : "WARN",
+  "loggerName" : "a.B",
+  "message" : "Msg",
+  "contextStack" : [ "stack_msg1", "stack_msg2" ],
+  "endOfBatch" : false,
+  "loggerFqcn" : "f.q.c.n",
+  "contextMap" : [ {
+    "key" : "MDC.A",
+    "value" : "A_Value"
+  }, {
+    "key" : "MDC.B",
+    "value" : "B_Value"
+  } ],
+  "source" : {
+    "class" : "net.logstash.log4j2.LogEventFixtures",
+    "method" : "createSimpleLogEvent",
+    "file" : "LogEventFixtures.java",
+    "line" : 91
+  }
+}
